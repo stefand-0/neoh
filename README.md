@@ -23,5 +23,7 @@ block top(in x, in y, out z) logic {
 ```
 • Easier macros with "known":
 ```SystemVerilog
-known macro1 <= clk, rst; 
+known macro1 <= clk, rst;
+// pass into block
+block macroeater(macro1) {//} 
 ```
