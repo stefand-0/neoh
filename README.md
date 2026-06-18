@@ -35,7 +35,7 @@ testbench random(RandomBlock){
     when(BEGIN){
         put signal1 <= 1;
         /10 expect(signal2 == 1);
-        pulse clk(10), rst(2);
+        pulse len(clk), gap(rst);
         /50 watchfor req <= ack & /100 out(status);
        writefile(mode vcd, file output.vcd); 
 }
