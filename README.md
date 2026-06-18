@@ -21,3 +21,7 @@ block top(in x, in y, out z) logic {
     ret n1;
 }
 ```
+• Easier macros with "known":
+```SystemVerilog
+known macro1 <= clk, rst; 
+```
