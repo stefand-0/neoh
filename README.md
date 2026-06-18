@@ -27,3 +27,16 @@ known macro1 <= clk, rst;
 // pass into block
 block macroeater(macro1) {//} 
 ```
+• Testbenches are easier now:
+```SystemVerilog
+testbench random(RandomBlock){
+    getvars(signal1, signal2, !signal3);
+    when(BEGIN){
+        put signal1 <= 1;
+        /10 expect(signal2 == 1);
+        pulse clk(10), rst(2);
+        /50 watchfor req <= ack & /100 out(status);
+       writefile(mode vcd, file output.vcd); 
+}
+}
+```
