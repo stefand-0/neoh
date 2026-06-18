@@ -14,3 +14,10 @@ piece ExampleBus {
 }
 pieced block Example(ExampleBus <= bus){...}
 ```
+• Improved hierarchy support:
+```SystemVerilog
+block top(in x, in y, out z) logic {
+    n1 passparams example(x,y,z);
+    ret n1;
+}
+```
