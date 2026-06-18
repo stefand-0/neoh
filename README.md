@@ -41,3 +41,13 @@ testbench random(RandomBlock){
 }
 }
 ```
+• Along with "testgroups":
+```SystemVerilog
+testgroup ExampleGroup {
+    do tb_random;
+    same {
+        run tb1;
+        run tb2;
+}
+}
+```
