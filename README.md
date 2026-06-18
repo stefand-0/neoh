@@ -51,3 +51,7 @@ testgroup ExampleGroup {
     } // "same" = synchronous running;
 }
 ```
+• Typing "always_ff" is easier now 🙃:
+```SystemVerilog
+aff posedge(clk) or negedge(rst) {}
+```
