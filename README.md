@@ -38,7 +38,7 @@ testbench random(RandomBlock){
         pulse len(clk), gap(rst);
         /50 watchfor req <= ack & /100 out(status);
        writefile(mode vcd, file output.vcd); 
-}
+    }
 }
 ```
 • Along with "testgroups":
@@ -48,6 +48,6 @@ testgroup ExampleGroup {
     same {
         run tb1;
         run tb2;
-}
+    } // "same" = synchronous running;
 }
 ```
