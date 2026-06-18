@@ -7,3 +7,10 @@ block Example(in a, in b, out c) logic {
     ret tempassign c [always 7:0] <= a + b;
 }
 ```
+• Improves on "interfaces":
+```SystemVerilog
+piece ExampleBus {
+    in addr, in data, out ready
+}
+pieced block Example(ExampleBus <= bus){...}
+```
