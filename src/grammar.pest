@@ -1,4 +1,3 @@
-// --- Whitespace & Basic tokens ---
 WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
 COMMENT    = _{ "//" ~ (!"\n" ~ ANY)* }
 
@@ -6,55 +5,37 @@ identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 integer    = @{ ASCII_DIGIT+ }
 bits       = @{ integer ~ ":" ~ integer }
 
-// --- Core Structural Keywords ---
-keyword = _{ "known" | "block" | "piece" | "testbench" | "testgroup" 
-           | "aff" | "put" | "expect" | "pulse" | "writefile" 
-           | "watchfor" | "out" | "do" | "same" | "run" }
-
-// --- Logic & Assignments ---
-// put a = b + c [always 7:0];
 width_constraint = { "[" ~ "always" ~ bits ~ "]" }
 expr             = { (identifier | integer) ~ (("+" | "-" | "*" | "/") ~ (identifier | integer))* }
-put_stmt         = { "put" ~ identifier ~ ("=" | "<=") ~ expr ~ width_constraint? ~ ";" }
 
-// --- Sequential Logic ---
-// aff posedge(clk) or posedge(rst) { ... }
-edge_type   = { "posedge" | "negedge" }
-sensitivity = { edge_type ~ "(" ~ identifier ~ ")" ~ ("or" ~ edge_type ~ "(" ~ identifier ~ ")")* }
-aff_block   = { "aff" ~ sensitivity ~ "{" ~ (put_stmt | aff_block)* ~ "}" }
+known_stmt = { "known" ~ identifier ~ "<=" ~ identifier ~ ("," ~ identifier)* ~ ";" }
 
-// --- Definitions -
-known_def = { "known" ~ identifier ~ "<=" ~ identifier ~ ("," ~ identifier)* ~ ";" }
+ret_stmt = { "ret" ~ "tempassign" ~ identifier ~ width_constraint? ~ "<=" ~ expr ~ ";" }
+pass_stmt = { identifier ~ "passparams" ~ identifier ~ "(" ~ params ~ ")" ~ ";" }
+ret_var_stmt = { "ret" ~ identifier ~ ";" }
+
+params = { identifier ~ ("," ~ identifier)* }
+
 piece_def = { "piece" ~ identifier ~ "{" ~ piece_member ~ ("," ~ piece_member)* ~ "}" }
-piece_member = { ("in" | "out") ~ "[" ~ bits ~ "]" ~ identifier }
+piece_member = { ("in" | "out") ~ identifier }
 
-block_def = { "block" ~ identifier ~ "(" ~ params ~ ")" ~ "logic" ~ "{" ~ (aff_block | put_stmt | piece_inst | assignment)* ~ "}" }
-params    = { (identifier | piece_ref) ~ ("," ~ (identifier | piece_ref))* }
-piece_ref = { identifier ~ identifier } // Type Instance
-piece_inst = { "piece" ~ identifier ~ identifier ~ ";" }
-assignment = { "put" ~ identifier ~ "=" ~ identifier ~ ";" }
+block_def = { ("pieced")? ~ "block" ~ identifier ~ "(" ~ block_params ~ ")" ~ ("logic")? ~ "{" ~ (ret_stmt | pass_stmt | ret_var_stmt | block_def)* ~ "}" }
+block_params = { (identifier | piece_inst_param) ~ ("," ~ (identifier | piece_inst_param))* }
+piece_inst_param = { identifier ~ "<=" ~ identifier }
 
-// -- Verification ---
-// getvars(clk, *, !rst)
-getvars_arg = { ("!"? ~ identifier) | "*" }
+testbench = { "testbench" ~ identifier ~ "(" ~ identifier ~ ")" ~ "{" ~ getvars_cmd ~ "when" ~ "(" ~ "BEGIN" ~ ")" ~ "{" ~ (verif_cmd)* ~ "}" ~ "}" }
 getvars_cmd = { "getvars" ~ "(" ~ getvars_arg ~ ("," ~ getvars_arg)* ~ ")" ~ ";" }
+getvars_arg = { ("!"? ~ identifier) | "*" }
 
-// Commands
+verif_cmd = { expect_cmd | pulse_cmd | watch_cmd | write_cmd }
 expect_cmd = { "/" ~ integer ~ "expect" ~ "(" ~ expr ~ "==" ~ expr ~ ")" ~ ";" }
-pulse_cmd  = { "pulse" ~ identifier ~ "(" ~ integer ~ ")" ~ ("," ~ identifier ~ "(" ~ integer ~ ")")* ~ ";" }
+pulse_cmd  = { "pulse" ~ "len" ~ "(" ~ identifier ~ ")" ~ "," ~ "gap" ~ "(" ~ identifier ~ ")" ~ ";" }
+watch_cmd  = { "/" ~ integer ~ "watchfor" ~ expr ~ "<=" ~ expr ~ "&" ~ "/" ~ integer ~ "out" ~ "(" ~ identifier ~ ")" ~ ";" }
 write_cmd  = { "writefile" ~ "(" ~ "mode" ~ identifier ~ "," ~ "file" ~ identifier ~ ")" ~ ";" }
-watch_cmd  = { "/" ~ integer ~ "watchfor" ~ expr ~ "<=" ~ expr ~ ("&" ~ "/" ~ integer ~ identifier ~ "(" ~ identifier ~ ")")? ~ ";" }
-out_cmd    = { "out" ~ "(" ~ identifier ~ ")" ~ ";" }
-
-// --- Testbench / Testgroup ---
-testbench = { "testbench" ~ identifier ~ "(" ~ identifier ~ ")" ~ "{" ~ (getvars_cmd | when_block | verif_cmd)* ~ "}" }
-when_block = { "when" ~ "(" ~ "BEGIN" ~ ")" ~ "{" ~ (put_stmt | verif_cmd)* ~ "}" }
-verif_cmd = { expect_cmd | pulse_cmd | write_cmd | watch_cmd | out_cmd }
 
 testgroup = { "testgroup" ~ identifier ~ "{" ~ (do_stmt | same_block)* ~ "}" }
-do_stmt   = { "do" ~ identifier ~ ";" }
+do_stmt = { "do" ~ identifier ~ ";" }
 same_block = { "same" ~ "{" ~ (run_stmt)* ~ "}" }
-run_stmt   = { "run" ~ identifier ~ ";" }
+run_stmt = { "run" ~ identifier ~ ";" }
 
-// --- Root Entry ---
-file = { SOI ~ (known_def | block_def | piece_def | testbench | testgroup)* ~ EOI }
+file = { SOI ~ (known_stmt | block_def | piece_def | testbench | testgroup)* ~ EOI }
