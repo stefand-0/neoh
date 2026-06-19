@@ -149,11 +149,26 @@ fn build_ret_assign(pair: Pair<Rule>) -> RetAssign {
 
 fn build_testgroup(pair: Pair<Rule>) -> TestGroupDef {
     let mut i = pair.into_inner();
-    TestGroupDef {
-        name: i.next().map(|x| x.as_str().to_string()).unwrap_or_default(),
-        items: Vec::new(),
+    let name = i.next().map(|p| p.as_str().to_string()).unwrap_or_default();
+    
+    let mut items = Vec::new();
+    for p in i {
+        match p.as_rule() {
+            Rule::do_cmd => {
+                let name = p.into_inner().next().map(|n| n.as_str().to_string()).unwrap_or_default();
+                items.push(TestGroupItem::Do(name));
+            }
+            Rule::same_block => {
+                // Collect all identifiers inside the same {} block
+                let members = p.into_inner().map(|x| x.as_str().to_string()).collect();
+                items.push(TestGroupItem::Same(members));
+            }
+            _ => (),
+        }
     }
+    TestGroupDef { name, items }
 }
+
 
 fn build_piece(pair: Pair<Rule>) -> PieceDef {
     let mut i = pair.into_inner();

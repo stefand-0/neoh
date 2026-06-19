@@ -38,10 +38,9 @@ piece_inst_param = { identifier ~ "<=" ~ identifier }
 testbench   = { "testbench" ~ identifier ~ "(" ~ identifier ~ ")" ~ "{" ~ getvars_cmd ~ "when" ~ "(" ~ "BEGIN" ~ ")" ~ "{" ~ (verif_cmd)* ~ "}" ~ "}" }
 getvars_cmd = { "getvars" ~ "(" ~ getvars_arg ~ ("," ~ getvars_arg)* ~ ")" ~ ";" }
 getvars_arg = { ("!"? ~ identifier) | "*" }
-
-testgroup  = { "testgroup" ~ identifier ~ "{" ~ (do_stmt | same_block)* ~ "}" }
-do_stmt    = { "do" ~ identifier ~ ";" }
-same_block = { "same" ~ "{" ~ (run_stmt)* ~ "}" }
+testgroup   = { "testgroup" ~ identifier ~ "{" ~ (do_cmd | same_block)* ~ "}" }
+do_cmd      = { "do" ~ identifier ~ ";" }
+same_block  = { "same" ~ "{" ~ identifier* ~ "}" }
 run_stmt   = { "run" ~ identifier ~ ";" }
 
 file = { SOI ~ (known_stmt | block_def | piece_def | testbench | testgroup)* ~ EOI }

@@ -78,10 +78,26 @@ impl Emitter {
     }
 
     fn emit_testgroup(&mut self, g: &TestGroupDef) {
-        self.output.push_str(&format!("module tg_{}();\n", g.name));
-        // Testgroup logic remains standard
-        self.output.push_str("endmodule\n");
+    self.output.push_str(&format!("module tg_{}();\n", g.name));
+    
+    for item in &g.items {
+        match item {
+            TestGroupItem::Do(name) => {
+                // Single testbench instance
+                self.output.push_str(&format!("  tb_{} instance_{}();\n", name, name));
+            }
+            TestGroupItem::Same(members) => {
+                self.output.push_str("  // Concurrent execution block\n");
+                for m in members {
+                    // Instantiating all these in the same module makes them run parallel
+                    self.output.push_str(&format!("  tb_{} instance_{}();\n", m, m));
+                }
+            }
+        }
     }
+    self.output.push_str("endmodule\n");
+}
+
 
     fn emit_piece(&mut self, _p: &PieceDef) { /* Handle interface definition */ }
 }
