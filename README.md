@@ -79,3 +79,8 @@ block Example(in a, in b, out c) logic {
     ret c;
 } 
 ```
+Compile it:
+```bash
+./target/release/neo_compiler simple.neoh
+# Generates simple.sv
+```
