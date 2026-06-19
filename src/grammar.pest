@@ -27,7 +27,7 @@ testbench = { "testbench" ~ identifier ~ "(" ~ identifier ~ ")" ~ "{" ~ getvars_
 getvars_cmd = { "getvars" ~ "(" ~ getvars_arg ~ ("," ~ getvars_arg)* ~ ")" ~ ";" }
 getvars_arg = { ("!"? ~ identifier) | "*" }
 
-verif_cmd = { expect_cmd | pulse_cmd | watch_cmd | write_cmd }
+verif_cmd = { expect_cmd | pulse_cmd | watch_cmd | write_cmd | put_stmt }
 expect_cmd = { "/" ~ integer ~ "expect" ~ "(" ~ expr ~ "==" ~ expr ~ ")" ~ ";" }
 pulse_cmd  = { "pulse" ~ "len" ~ "(" ~ identifier ~ ")" ~ "," ~ "gap" ~ "(" ~ identifier ~ ")" ~ ";" }
 watch_cmd  = { "/" ~ integer ~ "watchfor" ~ expr ~ "<=" ~ expr ~ "&" ~ "/" ~ integer ~ "out" ~ "(" ~ identifier ~ ")" ~ ";" }
