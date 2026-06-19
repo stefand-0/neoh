@@ -74,11 +74,20 @@ cargo build --release
 ## Quick Start
 Create a file called main.neoh:
 ```SystemVerilog
-block Example(out c) logic {
-    put c <= 1+2
-    out("Hello Neo!");
-    ret c;
-} 
+// main.neoh
+
+block Example(in a, in b, out c) logic {
+    ret c <= a + b;
+}
+
+testbench Verification(Example) {
+    getvars(a, b, c);
+    when(BEGIN) {
+        put a <= 1;
+        put b <= 2;
+        /100 out("Hello Neo!");
+    }
+}
 ```
 Compile it:
 ```bash
