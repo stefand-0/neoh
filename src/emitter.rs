@@ -3,13 +3,26 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  */
 
-use crate::ast::{File, Statement, BlockDef, TestbenchDef, TestGroupDef, TestGroupItem};
+use crate::ast::{
+    BlockDef, BlockStmt, File, GroupItem, OutTarget, PieceDef, PutStmt, Statement,
+    TestGroupDef, TestbenchDef, VerifCmd
+};
 
-pub struct Emitter { pub output: String }
+pub fn emit(file: &File) -> String {
+    let mut emitter = Emitter::new();
+    emitter.emit_file(file);
+    emitter.output
+}
+
+pub struct Emitter {
+    pub output: String,
+}
 
 impl Emitter {
-    pub fn new() -> Self { Self { output: String::new() } }
-    
+    pub fn new() -> Self {
+        Emitter { output: String::new() }
+    }
+
     pub fn emit_file(&mut self, file: &File) {
         self.output.push_str("`timescale 1ns / 1ps\n\n");
         for stmt in &file.statements {
@@ -20,6 +33,7 @@ impl Emitter {
                 Statement::Piece(p) => self.emit_piece(p),
                 Statement::Known(_, _) => {},
             }
+            self.output.push_str("\n");
         }
     }
 
@@ -28,13 +42,17 @@ impl Emitter {
         for stmt in &b.body {
             match stmt {
                 BlockStmt::RetAssign(r) => {
-                    let w = r.width.as_ref().map(|x| format!("[{}:{}]", x.msb, x.lsb)).unwrap_or_default();
-                    self.output.push_str(&format!("  assign {} {} = {};\n", w, r.target, r.expr));
+                    self.output.push_str(&format!("  assign {} = {};\n", r.target, r.expr));
+                }
+                BlockStmt::RetVar(v) => {
+                    self.output.push_str(&format!("  // Return variable tracking: {}\n", v));
                 }
                 BlockStmt::PassParams(p) => {
-                    self.output.push_str(&format!("  {} {}({});\n", p.block_type, p.inst_name, p.params.join(", ")));
+                    self.output.push_str(&format!("  {} {} (\n", p.block_type, p.inst_name));
+                    let formatted: Vec<String> = p.params.iter().map(|param| format!("    .{}()", param)).collect();
+                    self.output.push_str(&formatted.join(",\n"));
+                    self.output.push_str("\n  );\n");
                 }
-                _ => {}
             }
         }
         self.output.push_str("endmodule\n");
@@ -47,28 +65,38 @@ impl Emitter {
         for cmd in &t.body {
             self.emit_verif_cmd(cmd);
         }
-        self.output.push_str("  end\nendmodule\n");
+        self.output.push_str("  end\n");
+        self.output.push_str("endmodule\n");
     }
 
     fn emit_verif_cmd(&mut self, cmd: &VerifCmd) {
         match cmd {
-            VerifCmd::Expect { time, lhs, rhs } => 
-                self.output.push_str(&format!("    #{} assert({} == {});\n", time, lhs, rhs)),
-            VerifCmd::Pulse { len, gap } => 
-                self.output.push_str(&format!("    {} = 1; #{} {} = 0; #{} {} = 0;\n", len, len, len, gap, gap)),
-            VerifCmd::Watchfor { lhs, rhs, time_b, out, .. } => {
-                let out_sv = match out { OutTarget::Variable(v) => v.clone(), OutTarget::Literal(s) => s.clone() };
-                self.output.push_str(&format!("    wait({} == {}); #{} ({});\n", lhs, rhs, time_b, out_sv));
+            VerifCmd::Expect { time, lhs, rhs } => {
+                self.output.push_str(&format!("    #{} if ({} !== {}) $display(\"Assertion failed for {}\");\n", time, lhs, rhs, lhs));
             }
-            VerifCmd::Write(w) => self.output.push_str(&format!("    {} = {};\n", w.target, w.val)),
+            VerifCmd::Pulse { len, gap } => {
+                self.output.push_str(&format!("    // Pulse generated with length {} and gap {}\n", len, gap));
+            }
+            VerifCmd::Watchfor { time_a, lhs, rhs, time_b, out } => {
+                let target_str = match out {
+                    OutTarget::Variable(v) => v.clone(),
+                    OutTarget::Literal(s) => format!("\"{}\"", s),
+                };
+                self.output.push_str(&format!("    // Watch for {} == {} between {} and {}, output to {}\n", lhs, rhs, time_a, time_b, target_str));
+            }
+            VerifCmd::Write(w) => {
+                self.output.push_str(&format!("    {} = {};\n", w.target, w.val));
+            }
             VerifCmd::Put(p) => self.emit_put(p),
-            // Added support for your new grammar rules
             VerifCmd::Out { time, target } => {
-                let t_str = match target { OutTarget::Variable(v) => v.clone(), OutTarget::Literal(s) => s.clone() };
-                self.output.push_str(&format!("    #{} $display({});\n", time, t_str));
-            },
-            VerifCmd::WriteFile { file, .. } => {
-                self.output.push_str(&format!("    $dumpfile(\"{}\"); $dumpvars;\n", file));
+                let target_str = match target {
+                    OutTarget::Variable(v) => v.clone(),
+                    OutTarget::Literal(s) => format!("\"{}\"", s),
+                };
+                self.output.push_str(&format!("    #{} $display({});\n", time, target_str));
+            }
+            VerifCmd::WriteFile { mode, file } => {
+                self.output.push_str(&format!("    // File operation - Mode: {}, Target File: {}\n", mode, file));
             }
         }
     }
@@ -78,27 +106,25 @@ impl Emitter {
     }
 
     fn emit_testgroup(&mut self, g: &TestGroupDef) {
-    self.output.push_str(&format!("module tg_{}();\n", g.name));
-    
-    for item in &g.items {
-        match item {
-            TestGroupItem::Do(name) => {
-                // Single testbench instance
-                self.output.push_str(&format!("  tb_{} instance_{}();\n", name, name));
-            }
-            TestGroupItem::Same(members) => {
-                self.output.push_str("  // Concurrent execution block\n");
-                for m in members {
-                    // Instantiating all these in the same module makes them run parallel
-                    self.output.push_str(&format!("  tb_{} instance_{}();\n", m, m));
+        self.output.push_str(&format!("module tg_{}();\n", g.name));
+        for item in &g.items {
+            match item {
+                GroupItem::Do(name) => {
+                    self.output.push_str(&format!("  tb_{} instance_{}();\n", name, name));
+                }
+                GroupItem::Same(members) => {
+                    self.output.push_str("  // Concurrent execution block\n");
+                    for m in members {
+                        self.output.push_str(&format!("  tb_{} instance_{}();\n", m, m));
+                    }
                 }
             }
         }
+        self.output.push_str("endmodule\n");
     }
-    self.output.push_str("endmodule\n");
-}
 
-
-    fn emit_piece(&mut self, _p: &PieceDef) { /* Handle interface definition */ }
+    fn emit_piece(&mut self, _p: &PieceDef) {
+        self.output.push_str("// Piece structure definition generated in AST\n");
+    }
 }
 

@@ -3,7 +3,10 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  */
 
-use crate::ast::{File, Statement, BlockDef, TestbenchDef, TestGroupDef, TestGroupItem}; // Add TestGroupItem here
+use crate::ast::{
+    BlockDef, BlockStmt, File, GroupItem, OutTarget, PieceDef, PutStmt, RetAssign,
+    Statement, TestGroupDef, TestbenchDef, VerifCmd, WriteStmt, PassParams
+};
 use crate::parser::Rule;
 use pest::iterators::{Pair, Pairs};
 
@@ -17,7 +20,6 @@ pub fn build_ast(pairs: Pairs<Rule>) -> File {
                     Rule::testbench => statements.push(Statement::Testbench(build_testbench(p))),
                     Rule::testgroup => statements.push(Statement::Testgroup(build_testgroup(p))),
                     Rule::piece_def => statements.push(Statement::Piece(build_piece(p))),
-                    Rule::known_stmt => (), // Handle if needed
                     _ => (),
                 }
             }
@@ -38,14 +40,24 @@ fn build_block(pair: Pair<Rule>) -> BlockDef {
             Rule::block_params => {
                 params = p.into_inner().map(|x| x.as_str().to_string()).collect();
             }
-            Rule::ret_stmt => body.push(BlockStmt::RetAssign(build_ret_assign(p))),
+            Rule::ret_stmt => {
+                body.push(BlockStmt::RetAssign(build_ret_assign(p)));
+            }
             Rule::ret_var_stmt => {
                 if let Some(n) = p.into_inner().next() {
                     body.push(BlockStmt::RetVar(n.as_str().to_string()));
                 }
             }
             Rule::pass_stmt => {
-                 // Extend this if you use pass_stmt
+                let mut pass_inner = p.into_inner();
+                let block_type = pass_inner.next().map(|x| x.as_str().to_string()).unwrap_or_default();
+                let inst_name = pass_inner.next().map(|x| x.as_str().to_string()).unwrap_or_default();
+                let pass_params = pass_inner.map(|x| x.as_str().to_string()).collect();
+                body.push(BlockStmt::PassParams(PassParams {
+                    block_type,
+                    inst_name,
+                    params: pass_params,
+                }));
             }
             _ => (),
         }
@@ -62,8 +74,13 @@ fn build_testbench(pair: Pair<Rule>) -> TestbenchDef {
     for p in i {
         if p.as_rule() == Rule::verif_cmd {
             body.push(build_verif_cmd(p));
-        } else if let Some(inner) = p.into_inner().find(|x| x.as_rule() == Rule::verif_cmd) {
-            body.push(build_verif_cmd(inner));
+        } else {
+            // Traverse inside nested wrappers like when_block if they exist
+            for inner_p in p.into_inner() {
+                if inner_p.as_rule() == Rule::verif_cmd {
+                    body.push(build_verif_cmd(inner_p));
+                }
+            }
         }
     }
 
@@ -76,55 +93,55 @@ fn build_verif_cmd(pair: Pair<Rule>) -> VerifCmd {
         Rule::expect_cmd => {
             let mut i = inner.into_inner();
             VerifCmd::Expect {
-                time: i.next().map(|x| x.as_str().parse().unwrap_or(0)).unwrap_or(0),
+                time: i.next().and_then(|x| x.as_str().parse().ok()).unwrap_or(0),
                 lhs: i.next().map(|x| x.as_str().to_string()).unwrap_or_default(),
                 rhs: i.nth(1).map(|x| x.as_str().to_string()).unwrap_or_default(),
             }
-        },
+        }
         Rule::pulse_cmd => {
             let mut i = inner.into_inner();
             VerifCmd::Pulse {
                 len: i.next().map(|x| x.as_str().to_string()).unwrap_or_default(),
                 gap: i.nth(1).map(|x| x.as_str().to_string()).unwrap_or_default(),
             }
-        },
+        }
         Rule::watch_cmd => {
             let mut i = inner.into_inner();
             VerifCmd::Watchfor {
-                time_a: i.next().map(|x| x.as_str().parse().unwrap_or(0)).unwrap_or(0),
+                time_a: i.next().and_then(|x| x.as_str().parse().ok()).unwrap_or(0),
                 lhs: i.next().map(|x| x.as_str().to_string()).unwrap_or_default(),
                 rhs: i.next().map(|x| x.as_str().to_string()).unwrap_or_default(),
-                time_b: i.next().map(|x| x.as_str().parse().unwrap_or(0)).unwrap_or(0),
+                time_b: i.next().and_then(|x| x.as_str().parse().ok()).unwrap_or(0),
                 out: OutTarget::Variable(i.next().map(|x| x.as_str().to_string()).unwrap_or_default()),
             }
-        },
+        }
         Rule::out_cmd => {
             let mut i = inner.into_inner();
-            let time = i.next().map(|x| x.as_str().parse().unwrap_or(0)).unwrap_or(0);
-            let arg = i.next().expect("Missing arg in out_cmd");
+            let time = i.next().and_then(|x| x.as_str().parse().ok()).unwrap_or(0);
+            let arg = i.next().expect("Missing argument in out_cmd");
             let target = if arg.as_rule() == Rule::string_literal {
                 OutTarget::Literal(arg.as_str().trim_matches('"').to_string())
             } else {
                 OutTarget::Variable(arg.as_str().to_string())
             };
             VerifCmd::Out { time, target }
-        },
+        }
         Rule::writefile_cmd => {
             let mut i = inner.into_inner();
             VerifCmd::WriteFile {
                 mode: i.next().map(|x| x.as_str().to_string()).unwrap_or_default(),
                 file: i.nth(1).map(|x| x.as_str().to_string()).unwrap_or_default(),
             }
-        },
+        }
         Rule::write_cmd => {
             let mut i = inner.into_inner();
             VerifCmd::Write(WriteStmt {
                 target: i.next().map(|x| x.as_str().to_string()).unwrap_or_default(),
                 val: i.next().map(|x| x.as_str().to_string()).unwrap_or_default(),
             })
-        },
+        }
         Rule::put_stmt => build_put(inner),
-        _ => unreachable!("Unhandled verif_cmd rule: {:?}", inner.as_rule()),
+        _ => unreachable!("Unhandled verif_cmd rule variant: {:?}", inner.as_rule()),
     }
 }
 
@@ -155,13 +172,12 @@ fn build_testgroup(pair: Pair<Rule>) -> TestGroupDef {
     for p in i {
         match p.as_rule() {
             Rule::do_cmd => {
-                let name = p.into_inner().next().map(|n| n.as_str().to_string()).unwrap_or_default();
-                items.push(TestGroupItem::Do(name));
+                let d_name = p.into_inner().next().map(|n| n.as_str().to_string()).unwrap_or_default();
+                items.push(GroupItem::Do(d_name));
             }
             Rule::same_block => {
-                // Collect all identifiers inside the same {} block
                 let members = p.into_inner().map(|x| x.as_str().to_string()).collect();
-                items.push(TestGroupItem::Same(members));
+                items.push(GroupItem::Same(members));
             }
             _ => (),
         }
@@ -169,12 +185,11 @@ fn build_testgroup(pair: Pair<Rule>) -> TestGroupDef {
     TestGroupDef { name, items }
 }
 
-
 fn build_piece(pair: Pair<Rule>) -> PieceDef {
     let mut i = pair.into_inner();
     PieceDef {
         name: i.next().map(|x| x.as_str().to_string()).unwrap_or_default(),
-        members: Vec::new(),
+        members: i.map(|x| x.as_str().to_string()).collect(),
     }
 }
 
