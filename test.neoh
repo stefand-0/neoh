@@ -1,1 +1,19 @@
-block Example(){}
+testbench TestOne target EmptyLogic {
+    /10 out("Execution: Test One Started");
+}
+
+testbench TestTwo target EmptyLogic {
+    /10 out("Execution: Test Two Concurrent");
+}
+
+testbench TestThree target EmptyLogic {
+    /10 out("Execution: Test Three Concurrent");
+}
+
+testgroup FullSuite {
+    do TestOne;
+    same {
+        TestTwo
+        TestThree
+    }
+}
