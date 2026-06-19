@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-
 use crate::ast::*;
-// all the good stuff 🥴
+
 pub struct Emitter {
     pub output: String,
 }
@@ -86,12 +85,22 @@ impl Emitter {
                 self.output.push_str(&format!("    {} = 1; #{} {} = 0; #{} {} = 1;\n", len, len, len, gap, gap));
             }
             VerifCmd::Watchfor { time_a, lhs, rhs, time_b, out } => {
-                self.output.push_str(&format!("    wait({} == {}); #{} $display(\"%s\", {});\n", lhs, rhs, time_b, out));
+                let out_sv = match out {
+                    OutTarget::Variable(v) => v.clone(),
+                    OutTarget::Literal(s) => s.clone(),
+                };
+                self.output.push_str(&format!("    wait({} == {}); #{} $display({});\n", lhs, rhs, time_b, out_sv));
             }
             VerifCmd::WriteFile { mode, file } => {
                 self.output.push_str(&format!("    $dumpfile(\"{}\"); $dumpvars(0, {});\n", file, mode));
             }
+            VerifCmd::Put(p) => self.emit_put(p),
         }
+    }
+
+    fn emit_put(&mut self, p: &PutStmt) {
+        // Assuming non-blocking assignment for testbench driving
+        self.output.push_str(&format!("    {} {} {};\n", p.target, p.op, p.expr));
     }
 
     fn emit_testgroup(&mut self, g: &TestGroupDef) {
