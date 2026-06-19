@@ -1,0 +1,10 @@
+// test_out.neoh
+block EmptyLogic() logic {}
+
+testbench TestOut(EmptyLogic) {
+    getvars(*);
+    when(BEGIN) {
+        /100 out("Hello, NeoH!");
+    }
+}
+

@@ -31,7 +31,7 @@ params       = { identifier ~ ("," ~ identifier)* }
 piece_def    = { "piece" ~ identifier ~ "{" ~ piece_member ~ ("," ~ piece_member)* ~ "}" }
 piece_member = { ("in" | "out") ~ identifier }
 
-block_def    = { ("pieced")? ~ "block" ~ identifier ~ "(" ~ block_params ~ ")" ~ ("logic")? ~ "{" ~ (ret_stmt | pass_stmt | ret_var_stmt | block_def)* ~ "}" }
+block_def    = { ("pieced")? ~ "block" ~ identifier ~ "(" ~ block_params? ~ ")" ~ ("logic")? ~ "{" ~ (ret_stmt | pass_stmt | ret_var_stmt | block_def)* ~ "}" }
 block_params = { (identifier | piece_inst_param) ~ ("," ~ (identifier | piece_inst_param))* }
 piece_inst_param = { identifier ~ "<=" ~ identifier }
 
