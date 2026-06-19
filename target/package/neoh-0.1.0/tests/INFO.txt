@@ -1,3 +1,0 @@
-Info about testing:
-- New Features go in this subdirectory.
-- Anyone can fork this repository, and submit a pull request.
