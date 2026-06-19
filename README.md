@@ -75,8 +75,8 @@ cargo build --release
 Create a file called main.neoh:
 ```SystemVerilog
 block Example(out c) logic {
-    put c <= 1 + 2;
-    out(c);
+    put c <= 1+2
+    out("Hello Neo!");
     ret c;
 } 
 ```
