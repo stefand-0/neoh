@@ -59,5 +59,7 @@ aff posedge(clk) or negedge(rst) {}
 
 # In Conclusion...
 • It provides a more declarative way to write testbenches.
+
 • No more boilerplate code with complex hierarchies.
+
 • And more modular syntax.
