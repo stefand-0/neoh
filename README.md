@@ -88,5 +88,6 @@ Compile it:
 # Contributing
 We welcome contributions! Please fork the repository and submit a pull request.
 1. Run ```bash cargo test
-``` to ensure changes pass.
+``` 
+to ensure changes pass.
 2. Add tests for new features in ```bash tests ``` 
