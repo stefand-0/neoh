@@ -103,3 +103,8 @@ We welcome contributions! Please fork the repository and submit a pull request.
 to ensure changes pass.
 
 2. Add tests for new features in `/tests`.
+
+# RELEASES
+
+• v1.0.0-beta on Github
+• v0.3.2 on [crates.io](https://crates.io/crates/neoh?hl=en-GB)
