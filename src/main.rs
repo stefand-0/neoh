@@ -105,7 +105,8 @@ fn transpile_piece(pair: pest::iterators::Pair<Rule>) -> String {
 fn transpile_block(pair: pest::iterators::Pair<Rule>) -> String {
     let mut inner = pair.into_inner();
     let name = inner.next().map(|p| p.as_str()).unwrap_or("UnknownBlock");
-    let mut sv = format!("module {}(\n", name);
+    
+    let mut ports = Vec::new();
     let mut stmts = Vec::new();
     
     for item in inner {
@@ -116,7 +117,7 @@ fn transpile_block(pair: pest::iterators::Pair<Rule>) -> String {
                         let mut p_in = p.into_inner();
                         if let (Some(d), Some(n)) = (p_in.next(), p_in.next()) {
                             let dir = if d.as_str() == "in" { "input" } else { "output" };
-                            sv.push_str(&format!("  {} logic {},\n", dir, n.as_str()));
+                            ports.push(format!("{} logic {}", dir, n.as_str()));
                         }
                     }
                 }
@@ -125,8 +126,8 @@ fn transpile_block(pair: pest::iterators::Pair<Rule>) -> String {
             _ => {}
         }
     }
-    if sv.ends_with(",\n") { sv.truncate(sv.len() - 2); sv.push('\n'); }
-    sv.push_str(");\n\n");
+
+    let mut sv = format!("module {}(\n  {}\n);\n\n", name, ports.join(",\n  "));
     for stmt in stmts { sv.push_str(&transpile_block_statement(stmt, "  ")); }
     sv.push_str("endmodule\n\n");
     sv
