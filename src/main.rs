@@ -102,31 +102,29 @@ fn transpile_piece(pair: pest::iterators::Pair<Rule>) -> String {
     sv
 }
 
+fn find_ports(pair: pest::iterators::Pair<Rule>, ports: &mut Vec<String>) {
+    if pair.as_rule() == Rule::port {
+        let mut p_in = pair.into_inner();
+        if let (Some(d), Some(n)) = (p_in.next(), p_in.next()) {
+            let dir = if d.as_str() == "in" { "input" } else { "output" };
+            ports.push(format!("{} logic {}", dir, n.as_str()));
+        }
+    } else {
+        for child in pair.into_inner() {
+            find_ports(child, ports);
+        }
+    }
+}
+
 fn transpile_block(pair: pest::iterators::Pair<Rule>) -> String {
     let mut inner = pair.into_inner();
     let name = inner.next().map(|p| p.as_str()).unwrap_or("UnknownBlock");
-    
     let mut ports = Vec::new();
     let mut stmts = Vec::new();
-    
+    find_ports(pair.clone(), &mut ports);
     for item in inner {
-        match item.as_rule() {
-            Rule::port_list => {
-                for p in item.into_inner() {
-                    if p.as_rule() == Rule::port {
-                        let mut p_in = p.into_inner();
-                        if let (Some(d), Some(n)) = (p_in.next(), p_in.next()) {
-                            let dir = if d.as_str() == "in" { "input" } else { "output" };
-                            ports.push(format!("{} logic {}", dir, n.as_str()));
-                        }
-                    }
-                }
-            },
-            Rule::block_stmt => stmts.push(item),
-            _ => {}
-        }
+        if item.as_rule() == Rule::block_stmt { stmts.push(item); }
     }
-
     let mut sv = format!("module {}(\n  {}\n);\n\n", name, ports.join(",\n  "));
     for stmt in stmts { sv.push_str(&transpile_block_statement(stmt, "  ")); }
     sv.push_str("endmodule\n\n");
