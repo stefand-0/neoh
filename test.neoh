@@ -1,5 +1,13 @@
-block Print(){}
-testbench printb(Print){
-getvars();  
-out("Hello World");
-} 
+// test.neoh - Verification File
+
+block Adder(in a, in b, out c) logic {
+    var res;
+    res = 1;
+    ret c <= a + b;
+}
+
+testbench TestAdder target(Adder) {
+    var x;
+    x = 10;
+    /10 out("Simulation Started");
+}
