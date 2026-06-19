@@ -55,3 +55,6 @@ testgroup ExampleGroup {
 ```SystemVerilog
 aff posedge(clk) or negedge(rst) {}
 ```
+
+# In Conclusion...
+It provides a more declarative way to write testbenches.
