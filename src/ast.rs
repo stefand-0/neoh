@@ -64,3 +64,8 @@ pub struct TestGroupDef { pub name: String, pub items: Vec<GroupItem> }
 #[derive(Debug, Clone, PartialEq)]
 pub enum GroupItem { Do(String), Same(Vec<String>) }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum TestGroupItem {
+    Do(String),
+    Same(Vec<String>),
+}

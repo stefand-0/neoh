@@ -3,7 +3,7 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  */
 
-use crate::ast::*;
+use crate::ast::{File, Statement, BlockDef, TestbenchDef, TestGroupDef, TestGroupItem};
 
 pub struct Emitter { pub output: String }
 
