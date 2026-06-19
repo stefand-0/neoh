@@ -63,13 +63,15 @@ fn build_testbench(pair: Pair<Rule>) -> TestbenchDef {
     let mut inner = pair.into_inner();
     let name = inner.next().unwrap().as_str().to_string();
     let target = inner.next().unwrap().as_str().to_string();
-    let mut body = Vec::new();
     
-    for p in inner {
-        if p.as_rule() == Rule::verif_cmd {
-            body.push(parse_verif_cmd(p.into_inner().next().unwrap()));
-        }
+    let _getvars = inner.next().unwrap();
+    let when_block = inner.next().unwrap();
+    
+    let mut body = Vec::new();
+    for p in when_block.into_inner() {
+        body.push(parse_verif_cmd(p));
     }
+    
     TestbenchDef { name, target, body }
 }
 
@@ -77,22 +79,50 @@ fn parse_verif_cmd(pair: Pair<Rule>) -> VerifCmd {
     match pair.as_rule() {
         Rule::expect_cmd => {
             let mut i = pair.into_inner();
-            VerifCmd::Expect { time: i.next().unwrap().as_str().parse().unwrap(), lhs: i.next().unwrap().as_str().to_string(), rhs: i.next().unwrap().as_str().to_string() }
+            VerifCmd::Expect { 
+                time: i.next().unwrap().as_str().parse().unwrap(), 
+                lhs: i.next().unwrap().as_str().to_string(), 
+                rhs: i.next().unwrap().as_str().to_string() 
+            }
         },
         Rule::pulse_cmd => {
             let mut i = pair.into_inner();
-            VerifCmd::Pulse { len: i.next().unwrap().as_str().to_string(), gap: i.next().unwrap().as_str().to_string() }
+            VerifCmd::Pulse { 
+                len: i.next().unwrap().as_str().to_string(), 
+                gap: i.next().unwrap().as_str().to_string() 
+            }
         },
         Rule::watch_cmd => {
             let mut i = pair.into_inner();
-            VerifCmd::Watchfor { time_a: i.next().unwrap().as_str().parse().unwrap(), lhs: i.next().unwrap().as_str().to_string(), rhs: i.next().unwrap().as_str().to_string(), time_b: i.next().unwrap().as_str().parse().unwrap(), out: i.next().unwrap().as_str().to_string() }
+            VerifCmd::Watchfor { 
+                time_a: i.next().unwrap().as_str().parse().unwrap(), 
+                lhs: i.next().unwrap().as_str().to_string(), 
+                rhs: i.next().unwrap().as_str().to_string(), 
+                time_b: i.next().unwrap().as_str().parse().unwrap(), 
+                out: i.next().unwrap().as_str().to_string() 
+            }
         },
         Rule::write_cmd => {
             let mut i = pair.into_inner();
-            VerifCmd::WriteFile { mode: i.next().unwrap().as_str().to_string(), file: i.next().unwrap().as_str().to_string() }
+            VerifCmd::WriteFile { 
+                mode: i.next().unwrap().as_str().to_string(), 
+                file: i.next().unwrap().as_str().to_string() 
+            }
+        },
+        Rule::put_stmt => {
+            VerifCmd::Put(build_put(pair))
         },
         _ => unreachable!(),
     }
+}
+
+pub fn build_put(pair: Pair<Rule>) -> PutStmt {
+    let mut inner = pair.into_inner();
+    let target = inner.next().unwrap().as_str().to_string();
+    let op = inner.next().unwrap().as_str().to_string();
+    let expr = inner.next().unwrap().as_str().to_string();
+    let width = inner.find_map(|p| if p.as_rule() == Rule::width_constraint { Some(parse_width(p)) } else { None });
+    PutStmt { target, op, expr, width }
 }
 
 fn build_testgroup(pair: Pair<Rule>) -> TestGroupDef {
