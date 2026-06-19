@@ -77,4 +77,5 @@ Create a file called main.neoh:
 block Example(in a, in b, out c) logic {
     out tempassign c <= a + b;
     ret c;
-} ```
+} 
+```
