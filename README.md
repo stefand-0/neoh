@@ -31,7 +31,7 @@ block macroeater(macro1) {//}
 • Testbenches are easier now:
 ```SystemVerilog
 testbench random(RandomBlock){
-    getvars(signal1, signal2, !signal3);
+    getvars(signal1, signal2, !signal3, clk, rst);
 // "!" before a var (in getvars) indicates it should never be included, if, for example, "*" is passed as an argument (which means "all")
     when(BEGIN){
         put signal1 <= 1;
