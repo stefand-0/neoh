@@ -70,10 +70,10 @@ Ensure you have [Rust/Cargo](https://rustup.rs/) installed.
 git clone [https://github.com/yourusername/neoh](https://github.com/yourusername/neoh)
 cd neoh
 cargo build --release
-
+```
 ## Quick Start
 Create a file called main.neoh:
-```Verilog
+```SystemVerilog
 block Example(in a, in b, out c) logic {
     out tempassign c <= a + b;
     ret c;
