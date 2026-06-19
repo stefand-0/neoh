@@ -9,7 +9,7 @@ readme = "README.md"
 repository = "https://github.com/stefand-0/neoh"
 
 [[bin]]
-name = "neo_compiler"
+name = "neoh"
 path = "src/main.rs"
 
 [dependencies]
