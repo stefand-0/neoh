@@ -19,6 +19,12 @@
 pub struct File { pub statements: Vec<Statement> }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum OutTarget {
+    Variable(String),
+    Literal(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Known(String, Vec<String>),
     Block(BlockDef),
