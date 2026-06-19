@@ -46,8 +46,12 @@ getvars_arg = { ("!"? ~ identifier) | "*" }
 verif_cmd = { expect_cmd | pulse_cmd | watch_cmd | write_cmd | put_stmt }
 expect_cmd = { "/" ~ integer ~ "expect" ~ "(" ~ expr ~ "==" ~ expr ~ ")" ~ ";" }
 pulse_cmd  = { "pulse" ~ "len" ~ "(" ~ identifier ~ ")" ~ "," ~ "gap" ~ "(" ~ identifier ~ ")" ~ ";" }
-watch_cmd  = { "/" ~ integer ~ "watchfor" ~ expr ~ "<=" ~ expr ~ "&" ~ "/" ~ integer ~ "out" ~ "(" ~ identifier ~ ")" ~ ";" }
-write_cmd  = { "writefile" ~ "(" ~ "mode" ~ identifier ~ "," ~ "file" ~ identifier ~ ")" ~ ";" }
+
+string_literal = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+
+out_arg = { string_literal | identifier }
+watch_cmd = { "/" ~ integer ~ "watchfor" ~ expr ~ "<=" ~ expr ~ "&" ~ "/" ~ integer ~ "out" ~ "(" ~ out_arg ~ ")" ~ ";" }
+
 
 testgroup = { "testgroup" ~ identifier ~ "{" ~ (do_stmt | same_block)* ~ "}" }
 do_stmt = { "do" ~ identifier ~ ";" }
