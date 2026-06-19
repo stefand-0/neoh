@@ -6,6 +6,7 @@ NeoH (or NeoHDL) is a declarative HDL, proficient in creating extremely fast and
 block Example(in a, in b, out c) logic {
     ret tempassign c [always 7:0] <= a + b;
 }
+// NOTE tempassign assign a value to a variable for only that block. The [always MSB:LSB] identifier can be assigned to either the result, or expression.
 ```
 • Improves on "interfaces":
 ```SystemVerilog
