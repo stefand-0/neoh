@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 use crate::ast::*;
 use crate::parser::Rule;
 use pest::iterators::{Pair, Pairs};
@@ -111,13 +110,19 @@ fn parse_verif_cmd(pair: Pair<Rule>) -> VerifCmd {
         },
         Rule::watch_cmd => {
             let mut i = pair.into_inner();
-            VerifCmd::Watchfor { 
-                time_a: i.next().unwrap().as_str().parse().unwrap(), 
-                lhs: i.next().unwrap().as_str().to_string(), 
-                rhs: i.next().unwrap().as_str().to_string(), 
-                time_b: i.next().unwrap().as_str().parse().unwrap(), 
-                out: i.next().unwrap().as_str().to_string() 
-            }
+            let time_a = i.next().unwrap().as_str().parse().unwrap();
+            let lhs = i.next().unwrap().as_str().to_string();
+            let rhs = i.next().unwrap().as_str().to_string();
+            let time_b = i.next().unwrap().as_str().parse().unwrap();
+            
+            let out_arg = i.next().unwrap();
+            let out = if out_arg.as_rule() == Rule::string_literal {
+                OutTarget::Literal(out_arg.as_str().to_string())
+            } else {
+                OutTarget::Variable(out_arg.as_str().to_string())
+            };
+
+            VerifCmd::Watchfor { time_a, lhs, rhs, time_b, out }
         },
         Rule::write_cmd => {
             let mut i = pair.into_inner();
@@ -160,7 +165,3 @@ fn parse_width(pair: Pair<Rule>) -> WidthConstraint {
     let mut inner = pair.into_inner();
     WidthConstraint { msb: inner.next().unwrap().as_str().parse().unwrap(), lsb: inner.next().unwrap().as_str().parse().unwrap() }
 }
-
-/*
-This projec5 was really wierd... I had to learn about "pest", for making AST and parsing easier.
- */
