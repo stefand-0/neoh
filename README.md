@@ -13,24 +13,24 @@ block Example(in a, in b, out c) logic {
 piece ExampleBus {
     in addr, in data, out ready
 }
-pieced block Example(ExampleBus <= bus){...}
+pieced block Example(ExampleBus <= bus){}
 ```
 • Improved hierarchy support:
 ```SystemVerilog
 block top(in x, in y, out z) logic {
     n1 passparams example(x,y,z);
-    ret n1;
+    ret z <= n1;
 }
 ```
 • Easier macros with "known":
 ```SystemVerilog
 known macro1 <= clk, rst;
 // pass into block
-block macroeater(macro1) {//} 
+block macroeater(in clk, in rst) {} 
 ```
 • Testbenches are easier now:
 ```SystemVerilog
-testbench random(RandomBlock){
+testbench random target(RandomBlock){
     getvars(signal1, signal2, !signal3, clk, rst);
 // "!" before a var (in getvars) indicates it should never be included, if, for example, "*" is passed as an argument (which means "all")
     when(BEGIN){
@@ -47,8 +47,8 @@ testbench random(RandomBlock){
 testgroup ExampleGroup {
     do tb_random;
     same {
-        run tb1;
-        run tb2;
+        tb1
+        tb2
     } // "same" = synchronous running;
 }
 ```
@@ -78,7 +78,7 @@ block Example(in a, in b, out c) logic {
     ret c <= a + b;
 }
 
-testbench Verification(Example) {
+testbench Verification target(Example) {
     getvars(a, b, c);
     when(BEGIN) {
         put a <= 1;
@@ -103,4 +103,3 @@ We welcome contributions! Please fork the repository and submit a pull request.
 to ensure changes pass.
 
 2. Add tests for new features in `/tests`.
-

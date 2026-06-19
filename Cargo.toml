@@ -1,6 +1,6 @@
 [package]
 name = "neoh"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["stefand-0"]
 edition = "2021"
 description = "A declarative HDL transpiler for rapid testbench development."
