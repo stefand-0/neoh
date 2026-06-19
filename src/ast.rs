@@ -79,7 +79,7 @@ pub struct TestbenchDef {
 pub enum VerifCmd {
     Expect { time: u32, lhs: String, rhs: String },
     Pulse { len: String, gap: String },
-    Watchfor { time_a: u32, lhs: String, rhs: String, time_b: u32, out: String },
+    Watchfor { time_a: u32, lhs: String, rhs: String, time_b: u32, out: OutTarget },
     WriteFile { mode: String, file: String },
 }
 
