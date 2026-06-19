@@ -93,9 +93,12 @@ fn transpile_piece(pair: pest::iterators::Pair<Rule>) -> String {
     let name = inner.next().map(|p| p.as_str()).unwrap_or("UnknownPiece");
     let mut sv = format!("interface {};\n", name);
     for port in inner {
-        let mut p_inner = port.into_inner();
-        if let (Some(d), Some(n)) = (p_inner.next(), p_inner.next()) {
-            sv.push_str(&format!("  logic {}; // {}\n", n.as_str(), d.as_str()));
+        if port.as_rule() == Rule::piece_port {
+            let port_str = port.as_str().trim();
+            let dir = if port_str.starts_with("in") { "in" } else { "out" };
+            if let Some(n) = port.into_inner().next() {
+                sv.push_str(&format!("  logic {}; // {}\n", n.as_str(), dir));
+            }
         }
     }
     sv.push_str("endinterface\n\n");
@@ -104,9 +107,9 @@ fn transpile_piece(pair: pest::iterators::Pair<Rule>) -> String {
 
 fn find_ports(pair: pest::iterators::Pair<Rule>, ports: &mut Vec<String>) {
     if pair.as_rule() == Rule::port {
-        let mut p_in = pair.into_inner();
-        if let (Some(d), Some(n)) = (p_in.next(), p_in.next()) {
-            let dir = if d.as_str() == "in" { "input" } else { "output" };
+        let port_str = pair.as_str().trim();
+        let dir = if port_str.starts_with("in") { "input" } else { "output" };
+        if let Some(n) = pair.into_inner().next() {
             ports.push(format!("{} logic {}", dir, n.as_str()));
         }
     } else {
@@ -117,11 +120,12 @@ fn find_ports(pair: pest::iterators::Pair<Rule>, ports: &mut Vec<String>) {
 }
 
 fn transpile_block(pair: pest::iterators::Pair<Rule>) -> String {
+    let mut ports = Vec::new();
+    find_ports(pair.clone(), &mut ports);
+
     let mut inner = pair.into_inner();
     let name = inner.next().map(|p| p.as_str()).unwrap_or("UnknownBlock");
-    let mut ports = Vec::new();
     let mut stmts = Vec::new();
-    find_ports(pair.clone(), &mut ports);
     for item in inner {
         if item.as_rule() == Rule::block_stmt { stmts.push(item); }
     }
@@ -141,7 +145,7 @@ fn transpile_block_statement(pair: pest::iterators::Pair<Rule>, indent: &str) ->
         }
         Rule::ret_stmt => {
             let mut i = inner.into_inner();
-            let id = i.next().map(|p| p.as_str()).unwrap_or("");
+            let id = i.next().map(|p| p.as_str()).unwrap_or(" ");
             let expr = i.last().map(|p| p.as_str()).unwrap_or("");
             format!("{}assign {} = {};\n", indent, id, expr)
         }
