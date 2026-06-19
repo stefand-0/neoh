@@ -75,7 +75,8 @@ cargo build --release
 Create a file called main.neoh:
 ```SystemVerilog
 block Example(in a, in b, out c) logic {
-    out tempassign c <= a + b;
+    put c <= a + b;
+    out(c);
     ret c;
 } 
 ```
