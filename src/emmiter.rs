@@ -26,7 +26,8 @@ impl Emitter {
     }
 
     pub fn emit_file(&mut self, file: &File) {
-        for stmt in &file.statements {
+  self.output.push_str("`timescale 1ns / 1ps\n\n");
+for stmt in &file.statements {
             match stmt {
                 Statement::Block(b) => self.emit_block(b),
                 Statement::Testbench(t) => self.emit_testbench(t),
