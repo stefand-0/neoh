@@ -2,6 +2,7 @@
 
 module my_logic();
   assign  x = a + b;
+  assign  z = a - b;
   reg y;
 endmodule
 module tb_my_tb();

@@ -1,3 +1,5 @@
+// ast.rs
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct File { pub statements: Vec<Statement> }
 
@@ -46,6 +48,8 @@ pub enum VerifCmd {
     Watchfor { time_a: u32, lhs: String, rhs: String, time_b: u32, out: OutTarget },
     Write(WriteStmt),
     Put(PutStmt),
+    Out { time: u32, target: OutTarget },          // Added
+    WriteFile { mode: String, file: String },      // Added
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -59,3 +63,4 @@ pub struct TestGroupDef { pub name: String, pub items: Vec<GroupItem> }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GroupItem { Do(String), Same(Vec<String>) }
+

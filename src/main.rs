@@ -26,24 +26,41 @@ use crate::parser::{NeoParser, Rule};
 use crate::emitter::Emitter;
 
 fn main() {
+    // 1. Collect command line arguments
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         eprintln!("Usage: neoh <file.neoh>");
         process::exit(1);
     }
 
+    // 2. Read source file
     let input_path = &args[1];
     let source = fs::read_to_string(input_path)
-        .unwrap_or_else(|_| { eprintln!("Error: Could not read file"); process::exit(1); });
+        .unwrap_or_else(|_| { 
+            eprintln!("Error: Could not read file '{}'", input_path); 
+            process::exit(1); 
+        });
 
+    // 3. Run Parser
     let pairs = NeoParser::parse(Rule::file, &source)
-        .unwrap_or_else(|e| { eprintln!("Syntax Error: {}", e); process::exit(1); });
+        .unwrap_or_else(|e| { 
+            eprintln!("Syntax Error: {}", e); 
+            process::exit(1); 
+        });
 
+    // 4. Transform to AST and Emit SystemVerilog
     let ast = transformer::build_ast(pairs);
     let mut emitter = Emitter::new();
     emitter.emit_file(&ast);
 
+    // 5. Write output to .sv file
     let output_path = Path::new(input_path).with_extension("sv");
-    fs::write(output_path, emitter.output).unwrap_or_else(|_| { eprintln!("Error: Could not write file"); process::exit(1); });
-    println!("Compilation successful!");
+    fs::write(&output_path, emitter.output)
+        .unwrap_or_else(|_| { 
+            eprintln!("Error: Could not write output file"); 
+            process::exit(1); 
+        });
+
+    println!("Successfully transpiled '{}' to '{}'", input_path, output_path.display());
 }
+
