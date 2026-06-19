@@ -67,9 +67,7 @@ aff posedge(clk) or negedge(rst) {}
 ## Installation
 Ensure you have [Rust/Cargo](https://rustup.rs/) installed.
 ```bash
-git clone [https://github.com/yourusername/neoh](https://github.com/yourusername/neoh)
-cd neoh
-cargo build --release
+cargo install neoh
 ```
 ## Quick Start
 Create a file called main.neoh:
@@ -91,7 +89,7 @@ testbench Verification(Example) {
 ```
 Compile it:
 ```bash
-./target/release/neo_compiler simple.neoh
+neoh simple.neoh
 # Generates simple.sv
 ```
 
