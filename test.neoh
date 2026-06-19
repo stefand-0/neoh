@@ -1,0 +1,12 @@
+block my_logic(a, b) {
+    ret tempassign x <= a + b;
+    ret y;
+}
+
+testbench my_tb(my_logic) {
+    getvars(a, b);
+    when(BEGIN) {
+        put x = 10;
+        /1 expect(1 == 1);
+    }
+}

@@ -1,21 +1,5 @@
-//
-// * Copyright 2026 stefand-0
-// *
-// * Licensed under the Apache License, Version 2.0 (the "License");
-// * you may not use this file except in compliance with the License.
-// * You may obtain a copy of the License at
-//http://www.apache.org/licenses/LICENSE-2.0
-//*
-// * Unless required by applicable law or agreed to in writing, software
-// * distributed under the License is distributed on an "AS IS" BASIS,
-// * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// * See the License for the specific language //governing permissions and
-// * limitations under the License.
-
-
 WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
 COMMENT    = _{ "//" ~ (!"\n" ~ ANY)* }
-// should I make multiline comments? maybe, no.
 
 identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 integer    = @{ ASCII_DIGIT+ }
@@ -24,12 +8,22 @@ bits       = @{ integer ~ ":" ~ integer }
 width_constraint = { "[" ~ "always" ~ bits ~ "]" }
 expr             = { (identifier | integer) ~ (("+" | "-" | "*" | "/") ~ (identifier | integer))* }
 
-known_stmt = { "known" ~ identifier ~ "<=" ~ identifier ~ ("," ~ identifier)* ~ ";" }
+// Rules referenced in verif_cmd
+write_cmd = { "write" ~ identifier ~ "=" ~ expr ~ ";" }
+put_stmt  = { "put" ~ identifier ~ ("=" | "+=" | "-=") ~ expr ~ width_constraint? ~ ";" }
+expect_cmd = { "/" ~ integer ~ "expect" ~ "(" ~ expr ~ "==" ~ expr ~ ")" ~ ";" }
+pulse_cmd  = { "pulse" ~ "len" ~ "(" ~ identifier ~ ")" ~ "," ~ "gap" ~ "(" ~ identifier ~ ")" ~ ";" }
+watch_cmd = { "/" ~ integer ~ "watchfor" ~ expr ~ "<=" ~ expr ~ "&" ~ "/" ~ integer ~ "out" ~ "(" ~ out_arg ~ ")" ~ ";" }
 
+verif_cmd = { expect_cmd | pulse_cmd | watch_cmd | write_cmd | put_stmt }
+
+out_arg = { string_literal | identifier }
+string_literal = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+
+known_stmt = { "known" ~ identifier ~ "<=" ~ identifier ~ ("," ~ identifier)* ~ ";" }
 ret_stmt = { "ret" ~ "tempassign" ~ identifier ~ width_constraint? ~ "<=" ~ expr ~ ";" }
 pass_stmt = { identifier ~ "passparams" ~ identifier ~ "(" ~ params ~ ")" ~ ";" }
 ret_var_stmt = { "ret" ~ identifier ~ ";" }
-
 params = { identifier ~ ("," ~ identifier)* }
 
 piece_def = { "piece" ~ identifier ~ "{" ~ piece_member ~ ("," ~ piece_member)* ~ "}" }
@@ -42,16 +36,6 @@ piece_inst_param = { identifier ~ "<=" ~ identifier }
 testbench = { "testbench" ~ identifier ~ "(" ~ identifier ~ ")" ~ "{" ~ getvars_cmd ~ "when" ~ "(" ~ "BEGIN" ~ ")" ~ "{" ~ (verif_cmd)* ~ "}" ~ "}" }
 getvars_cmd = { "getvars" ~ "(" ~ getvars_arg ~ ("," ~ getvars_arg)* ~ ")" ~ ";" }
 getvars_arg = { ("!"? ~ identifier) | "*" }
-
-verif_cmd = { expect_cmd | pulse_cmd | watch_cmd | write_cmd | put_stmt }
-expect_cmd = { "/" ~ integer ~ "expect" ~ "(" ~ expr ~ "==" ~ expr ~ ")" ~ ";" }
-pulse_cmd  = { "pulse" ~ "len" ~ "(" ~ identifier ~ ")" ~ "," ~ "gap" ~ "(" ~ identifier ~ ")" ~ ";" }
-
-string_literal = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
-
-out_arg = { string_literal | identifier }
-watch_cmd = { "/" ~ integer ~ "watchfor" ~ expr ~ "<=" ~ expr ~ "&" ~ "/" ~ integer ~ "out" ~ "(" ~ out_arg ~ ")" ~ ";" }
-
 
 testgroup = { "testgroup" ~ identifier ~ "{" ~ (do_stmt | same_block)* ~ "}" }
 do_stmt = { "do" ~ identifier ~ ";" }

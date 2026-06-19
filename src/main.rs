@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-
-use std::env;
-use std::fs;
-use std::process;
+use std::{env, fs, process, path::Path};
 use pest::Parser;
 
 mod ast;
@@ -30,11 +27,23 @@ use crate::emitter::Emitter;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 { process::exit(1); }
-    let source = fs::read_to_string(&args[1]).unwrap();
-    let pairs = NeoParser::parse(Rule::file, &source).unwrap();
+    if args.len() < 2 {
+        eprintln!("Usage: neoh <file.neoh>");
+        process::exit(1);
+    }
+
+    let input_path = &args[1];
+    let source = fs::read_to_string(input_path)
+        .unwrap_or_else(|_| { eprintln!("Error: Could not read file"); process::exit(1); });
+
+    let pairs = NeoParser::parse(Rule::file, &source)
+        .unwrap_or_else(|e| { eprintln!("Syntax Error: {}", e); process::exit(1); });
+
     let ast = transformer::build_ast(pairs);
     let mut emitter = Emitter::new();
     emitter.emit_file(&ast);
-    fs::write(args[1].replace(".neoh", ".sv"), emitter.output).unwrap();
+
+    let output_path = Path::new(input_path).with_extension("sv");
+    fs::write(output_path, emitter.output).unwrap_or_else(|_| { eprintln!("Error: Could not write file"); process::exit(1); });
+    println!("Compilation successful!");
 }

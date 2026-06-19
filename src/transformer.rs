@@ -21,12 +21,14 @@ use pest::iterators::{Pair, Pairs};
 pub fn build_ast(pairs: Pairs<Rule>) -> File {
     let mut statements = Vec::new();
     for pair in pairs {
-        match pair.as_rule() {
-            Rule::block_def => statements.push(Statement::Block(build_block(pair))),
-            Rule::testbench => statements.push(Statement::Testbench(build_testbench(pair))),
-            Rule::testgroup => statements.push(Statement::Testgroup(build_testgroup(pair))),
-            Rule::piece_def => statements.push(Statement::Piece(build_piece(pair))),
-            _ => (),
+        for p in pair.into_inner() {
+            match p.as_rule() {
+                Rule::block_def => statements.push(Statement::Block(build_block(p))),
+                Rule::testbench => statements.push(Statement::Testbench(build_testbench(p))),
+                Rule::testgroup => statements.push(Statement::Testgroup(build_testgroup(p))),
+                Rule::piece_def => statements.push(Statement::Piece(build_piece(p))),
+                _ => (),
+            }
         }
     }
     File { statements }
@@ -34,14 +36,19 @@ pub fn build_ast(pairs: Pairs<Rule>) -> File {
 
 fn build_block(pair: Pair<Rule>) -> BlockDef {
     let mut inner = pair.into_inner();
-    let name = inner.next().unwrap().as_str().to_string();
+    let name = inner.next().expect("Expected block name").as_str().to_string();
     let mut body = Vec::new();
-    
+
     for p in inner {
         match p.as_rule() {
             Rule::ret_stmt => body.push(BlockStmt::RetAssign(build_ret_stmt(p))),
             Rule::pass_stmt => body.push(BlockStmt::PassParams(build_pass_stmt(p))),
-            Rule::ret_var_stmt => body.push(BlockStmt::RetVar(p.into_inner().next().unwrap().as_str().to_string())),
+            Rule::ret_var_stmt => {
+                let id = p.into_inner().next()
+                    .expect("ret_var_stmt found but identifier missing")
+                    .as_str().to_string();
+                body.push(BlockStmt::RetVar(id));
+            },
             Rule::block_def => body.push(BlockStmt::NestedBlock(build_block(p))),
             _ => (),
         }
@@ -50,44 +57,48 @@ fn build_block(pair: Pair<Rule>) -> BlockDef {
 }
 
 fn build_ret_stmt(pair: Pair<Rule>) -> RetAssign {
-    let mut inner = pair.into_inner();
-    let target = inner.next().unwrap().as_str().to_string();
-    let width = inner.find_map(|p| if p.as_rule() == Rule::width_constraint { Some(parse_width(p)) } else { None });
-    let expr = inner.next().unwrap().as_str().to_string();
+    let nodes: Vec<Pair<Rule>> = pair.into_inner().collect();
+    let target = nodes[0].as_str().to_string();
+    
+    let width = nodes.iter().find(|n| n.as_rule() == Rule::width_constraint)
+        .map(|n| parse_width(n.clone()));
+    
+    let expr = nodes.iter().find(|n| n.as_rule() == Rule::expr)
+        .expect("RetStmt expression missing").as_str().to_string();
+    
     RetAssign { target, expr, width }
 }
 
 fn build_pass_stmt(pair: Pair<Rule>) -> PassParams {
     let mut inner = pair.into_inner();
-    let inst_name = inner.next().unwrap().as_str().to_string();
-    let block_type = inner.next().unwrap().as_str().to_string();
+    let inst_name = inner.next().expect("PassParams inst_name missing").as_str().to_string();
+    let block_type = inner.next().expect("PassParams type missing").as_str().to_string();
     let params = inner.map(|p| p.as_str().to_string()).collect();
     PassParams { inst_name, block_type, params }
 }
 
 fn build_piece(pair: Pair<Rule>) -> PieceDef {
     let mut inner = pair.into_inner();
-    let name = inner.next().unwrap().as_str().to_string();
+    let name = inner.next().expect("Piece name missing").as_str().to_string();
     let members = inner.map(|p| {
         let mut m = p.into_inner();
-        (m.next().unwrap().as_str().to_string(), m.next().unwrap().as_str().to_string())
+        (m.next().expect("Member dir missing").as_str().to_string(), m.next().expect("Member name missing").as_str().to_string())
     }).collect();
     PieceDef { name, members }
 }
 
 fn build_testbench(pair: Pair<Rule>) -> TestbenchDef {
     let mut inner = pair.into_inner();
-    let name = inner.next().unwrap().as_str().to_string();
-    let target = inner.next().unwrap().as_str().to_string();
-    
-    let _getvars = inner.next().unwrap();
-    let when_block = inner.next().unwrap();
-    
+    let name = inner.next().expect("TB name missing").as_str().to_string();
+    let target = inner.next().expect("TB target missing").as_str().to_string();
+    let _getvars = inner.next();
+    let when_block = inner.next().expect("TB block missing");
+
     let mut body = Vec::new();
     for p in when_block.into_inner() {
         body.push(parse_verif_cmd(p));
     }
-    
+
     TestbenchDef { name, target, body }
 }
 
@@ -114,42 +125,43 @@ fn parse_verif_cmd(pair: Pair<Rule>) -> VerifCmd {
             let lhs = i.next().unwrap().as_str().to_string();
             let rhs = i.next().unwrap().as_str().to_string();
             let time_b = i.next().unwrap().as_str().parse().unwrap();
-            
             let out_arg = i.next().unwrap();
             let out = if out_arg.as_rule() == Rule::string_literal {
                 OutTarget::Literal(out_arg.as_str().to_string())
             } else {
                 OutTarget::Variable(out_arg.as_str().to_string())
             };
-
             VerifCmd::Watchfor { time_a, lhs, rhs, time_b, out }
         },
         Rule::write_cmd => {
             let mut i = pair.into_inner();
-            VerifCmd::WriteFile { 
-                mode: i.next().unwrap().as_str().to_string(), 
-                file: i.next().unwrap().as_str().to_string() 
-            }
+            VerifCmd::Write(WriteStmt { 
+                target: i.next().unwrap().as_str().to_string(), 
+                val: i.next().unwrap().as_str().to_string() 
+            })
         },
-        Rule::put_stmt => {
-            VerifCmd::Put(build_put(pair))
-        },
+        Rule::put_stmt => VerifCmd::Put(build_put(pair)),
         _ => unreachable!(),
     }
 }
 
 pub fn build_put(pair: Pair<Rule>) -> PutStmt {
-    let mut inner = pair.into_inner();
-    let target = inner.next().unwrap().as_str().to_string();
-    let op = inner.next().unwrap().as_str().to_string();
-    let expr = inner.next().unwrap().as_str().to_string();
-    let width = inner.find_map(|p| if p.as_rule() == Rule::width_constraint { Some(parse_width(p)) } else { None });
+    let nodes: Vec<Pair<Rule>> = pair.into_inner().collect();
+    let target = nodes[0].as_str().to_string();
+    let op = nodes[1].as_str().to_string();
+    
+    let width = nodes.iter().find(|n| n.as_rule() == Rule::width_constraint)
+        .map(|n| parse_width(n.clone()));
+    
+    let expr = nodes.iter().find(|n| n.as_rule() == Rule::expr)
+        .expect("Put expr missing").as_str().to_string();
+        
     PutStmt { target, op, expr, width }
 }
 
 fn build_testgroup(pair: Pair<Rule>) -> TestGroupDef {
     let mut inner = pair.into_inner();
-    let name = inner.next().unwrap().as_str().to_string();
+    let name = inner.next().expect("TG name missing").as_str().to_string();
     let mut items = Vec::new();
     for p in inner {
         match p.as_rule() {
