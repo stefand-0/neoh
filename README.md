@@ -63,3 +63,19 @@ aff posedge(clk) or negedge(rst) {}
 • No more boilerplate code with complex hierarchies.
 
 • And more modular syntax.
+
+## Installation
+Ensure you have [Rust/Cargo](https://rustup.rs/) installed.
+```bash
+git clone [https://github.com/yourusername/neoh](https://github.com/yourusername/neoh)
+cd neoh
+cargo build --release
+
+## Quick Start
+Create a file called main.neoh:
+```SystemVerilog
+block Example(in a, in b, out c) logic {
+    out tempassign c <= a + b;
+    ret c;
+}
+```
