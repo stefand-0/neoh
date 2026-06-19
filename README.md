@@ -70,9 +70,9 @@ Ensure you have [Rust/Cargo](https://rustup.rs/) installed.
 cargo install neoh
 ```
 ## Quick Start
-Create a file called main.neoh:
+Create a file called simple.neoh:
 ```SystemVerilog
-// main.neoh
+// simple.neoh
 
 block Example(in a, in b, out c) logic {
     ret c <= a + b;
